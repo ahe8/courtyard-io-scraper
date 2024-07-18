@@ -7,8 +7,6 @@ import os
 from dotenv import load_dotenv
 import time
 
-from redis_cache import RedisCache
-
 
 class ResultTable(Enum):
     IMAGE = 0
@@ -64,14 +62,6 @@ def create_name_param_for_pricecharting_search(attributes):
     else:
         with_spaces = attributes['Title']
     return with_spaces.replace(" ", "+")
-
-
-def check_cache(card_serial, redis):
-    return redis.get(card_serial)
-
-
-def update_cache(card_serial, prices, redis):
-    redis.set(card_serial, prices)
 
 
 def extract_prices_from_html(soup):
@@ -269,7 +259,7 @@ def send_courtyard_offer_to_discord(offer_price, listing_price, asset):
 
 def check_courtyard_offers(listing_price, asset):
     best_price = 0
-    SELLING_FEE = 0.06
+    SELLING_FEE = 0.065
 
     if 'offer_data' in asset:
         offers = asset['offer_data']
@@ -287,7 +277,6 @@ def get_image_from_pricecharting(soup):
 
 def driver():
     load_dotenv()
-    r = RedisCache()
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)
@@ -297,7 +286,7 @@ def driver():
 
     counter = 1
 
-    for n in range(0, number_of_assets, 100):
+    for n in range(200, number_of_assets, 100):
         courtyard_url = process_courtyard_url(url, n)
         response = get_courtyard_data(courtyard_url)
         data = response.json()
@@ -307,43 +296,26 @@ def driver():
         for asset in assets:
             print(counter)
             counter += 1
+
             attributes = flatten_attributes(asset['attributes'])
 
-            cache = check_cache(attributes['Serial'], r)
+            params = create_name_param_for_pricecharting_search(attributes)
+            response = get_page_from_pricecharting(params, attributes)
+            if not response: continue
+            time.sleep(1)
 
-            courtyard_price = get_price_from_courtyard(asset)
-            check_courtyard_offers(courtyard_price, asset)
-            if cache:
-                cache = cache[0]
-                pricecharting_prices = cache['prices']
-                card_img = cache['card_img']
-                pricecharting_url = cache['pricecharting_url']
-                liquidity_info = cache['liquidity_info']
-            else:
-                params = create_name_param_for_pricecharting_search(attributes)
-                response = get_page_from_pricecharting(params, attributes)
-                if not response:
-                    continue
+            soup = BeautifulSoup(response.content, "html.parser")
 
-                time.sleep(1)
+            pricecharting_information = get_prices_from_pricecharting(soup)
+            pricecharting_prices = pricecharting_information['prices']
+            pricecharting_url = response.url
 
-                soup = BeautifulSoup(response.content, "html.parser")
+            card_img = get_image_from_pricecharting(soup)
 
-                pricecharting_information = get_prices_from_pricecharting(soup)
-                pricecharting_prices = pricecharting_information['prices']
-                pricecharting_url = response.url
-
-                card_img = get_image_from_pricecharting(soup)
-
-                liquidity_info = get_liquidity_from_pricecharting(soup)
-
-                payload = pricecharting_information
-                payload['pricecharting_url'] = pricecharting_url
-                payload['card_img'] = card_img
-                payload['liquidity_info'] = liquidity_info
-                update_cache(attributes['Serial'], payload, r)
+            liquidity_info = get_liquidity_from_pricecharting(soup)
 
             card_name = asset['title']
+
             courtyard_url = f"https://courtyard.io/asset/{asset['proof_of_integrity']}"
             courtyard_price = get_price_from_courtyard(asset)
 

@@ -28,7 +28,7 @@ headers = {
 
 def process_courtyard_url(url, offset=0):
     params = url.split('page=1&')[1]
-    converted_url = f"https://api.courtyard.io/index/query?{params}&offset={offset}&limit=100&sortBy=listingDate%3Adesc"
+    converted_url = f"https://api.courtyard.io/index/query?{params}&offset={offset}&limit=5&sortBy=listingDate%3Adesc"
     return converted_url
 
 
@@ -304,6 +304,7 @@ def driver(url=default_url):
     load_dotenv()
 
     previous_result = get_last_fetched_from_artifact_file()
+    print(previous_result)
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)

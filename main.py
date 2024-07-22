@@ -289,16 +289,17 @@ def get_image_from_pricecharting(soup):
     return soup.find("div", id="product_details").find("img")['src']
 
 
-def get_last_fetched_from_artifact_file(env_file):
-    with open(env_file, "r") as f:
-        return f.read("MY_VAR=MY_VALUE")
+def update_github_repo_variable(last_result):
+    auth_token = os.environ['GH_REPO_VARIABLES_AUTH_TOKEN']
+    github_headers = {
+        "Authorization": f"Bearer {auth_token}",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    api_url = "https://api.github.com/repos/ahe8/cys/actions/variables/LAST_SERIAL_FETCHED"
 
+    body = {"name": "LAST_SERIAL_FETCHED", "value": str(last_result)}
 
-def save_to_artifact_file(last_result):
-    env_file = os.getenv('GITHUB_ENV')
-    with open(env_file, 'a') as f:
-        f.write(f"LAST_SERIAL_FETCHED={last_result}")
-        f.close()
+    requests.patch(api_url, json=body, headers=github_headers)
 
 
 def driver(url=default_url):
@@ -362,7 +363,7 @@ def driver(url=default_url):
                 volume=volume
             )
 
-    save_to_artifact_file(last_asset_processed)
+    update_github_repo_variable(last_asset_processed)
 
 
 def main(*argv):

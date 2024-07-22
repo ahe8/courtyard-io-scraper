@@ -25,6 +25,7 @@ jobs:
 
       - name: execute py script # run main.py
         env:
+          GH_REPO_VARIABLES_AUTH_TOKEN: ${{ secrets.GH_REPO_VARIABLES_AUTH_TOKEN }}
           DISCORD_WEBHOOK_COURTYARD_ID: ${{ secrets.DISCORD_WEBHOOK_COURTYARD_ID }}
           DISCORD_WEBHOOK_COURTYARD_TOKEN: ${{ secrets.DISCORD_WEBHOOK_COURTYARD_TOKEN }}
           DISCORD_WEBHOOK_OFFERS_ID: ${{ secrets.DISCORD_WEBHOOK_OFFERS_ID }}

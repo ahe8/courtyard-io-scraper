@@ -290,6 +290,7 @@ def get_image_from_pricecharting(soup):
 
 
 def update_github_repo_variable(last_result):
+    print(last_result)
     auth_token = os.environ['GH_REPO_VARIABLES_AUTH_TOKEN']
     github_headers = {
         "Authorization": f"Bearer {auth_token}",
@@ -313,13 +314,12 @@ def driver(url=default_url):
 
     assets = data['assets']
 
-    last_asset_processed = previous_result
+    update_github_repo_variable(flatten_attributes(assets[0]['attributes'])['Serial'])
 
     for asset in assets:
         attributes = flatten_attributes(asset['attributes'])
         if previous_result == str(attributes['Serial']):
             return
-        last_asset_processed = attributes['Serial']
 
         params = create_name_param_for_pricecharting_search(attributes)
         response = get_page_from_pricecharting(params, attributes)
@@ -362,8 +362,6 @@ def driver(url=default_url):
                 courtyard_url=courtyard_url,
                 volume=volume
             )
-
-    update_github_repo_variable(last_asset_processed)
 
 
 def main(*argv):

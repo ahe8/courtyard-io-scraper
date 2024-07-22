@@ -2,10 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from enum import Enum
-import json
 import os
 from dotenv import load_dotenv
 import time
+
+from redis_cache import RedisCache
 
 
 class ResultTable(Enum):
@@ -14,7 +15,7 @@ class ResultTable(Enum):
     SET = 2
 
 
-MINIMUM_PRICE_DIFFERENCE = 0.10  # percentage
+MINIMUM_PRICE_DIFFERENCE = 0.15  # percentage
 
 url = "https://courtyard.io/marketplace?sortBy=listingDate%3Adesc&itemsPerPage=100&page=1&Category=Pokémon&Grader=PSA&Grade=10+GEM+MINT%3B9+MINT"
 
@@ -26,17 +27,17 @@ headers = {
 }
 
 
-def process_courtyard_url(url, offset=0):
-    params = url.split('page=1&')[1]
-    converted_url = f"https://api.courtyard.io/index/query?{params}&offset={offset}&limit=100&sortBy=listingDate%3Adesc"
+def process_courtyard_url(courtyard_url: str, offset: int = 0, limit: int = 100) -> str:
+    params = courtyard_url.split(re.search(r"page=\d+&", courtyard_url)[0])[1]
+    converted_url = f"https://api.courtyard.io/index/query?{params}&offset={offset}&limit={limit}&sortBy=listingDate%3Adesc"
     return converted_url
 
 
-def get_courtyard_data(url):
-    return requests.get(url, headers=headers)
+def get_courtyard_data(courtyard_url: str) -> requests.Response:
+    return requests.get(courtyard_url, headers=headers)
 
 
-def flatten_attributes(attributes):
+def flatten_attributes(attributes: dict) -> dict:
     card_information = {'1st Edition': False}
 
     for attribute in attributes:
@@ -56,7 +57,7 @@ def flatten_attributes(attributes):
     return card_information
 
 
-def create_name_param_for_pricecharting_search(attributes):
+def create_name_param_for_pricecharting_search(attributes: dict) -> str:
     if 'Card Number' in attributes:
         with_spaces = f"{attributes['Title']} {attributes['Card Number']}"
     else:
@@ -64,7 +65,15 @@ def create_name_param_for_pricecharting_search(attributes):
     return with_spaces.replace(" ", "+")
 
 
-def extract_prices_from_html(soup):
+def check_cache(card_serial: str, redis_cache: RedisCache) -> dict:
+    return redis_cache.get(card_serial)
+
+
+def update_cache(card_serial: str, prices: dict, redis_cache: RedisCache) -> None:
+    redis_cache.set(card_serial, prices)
+
+
+def extract_prices_from_html(soup: BeautifulSoup) -> dict:
     elements = soup.find("div", id="full-prices").findAll('tr')
     card_information = {'prices': {}}
 
@@ -80,7 +89,7 @@ def extract_prices_from_html(soup):
     return card_information
 
 
-def print_search_results(search_query, results):
+def print_search_results(search_query: dict, results: list) -> None:
     print("------------------------------")
     print("Results Found:")
     print(f"Searched: {search_query}")
@@ -88,7 +97,7 @@ def print_search_results(search_query, results):
     print("------------------------------")
 
 
-def get_page_from_results(search_result_soup, attributes):
+def get_page_from_results(search_result_soup: BeautifulSoup, attributes: dict) -> requests.Response:
     rows = search_result_soup.find("table", id="games_table").find("tbody").findAll("tr", id=re.compile(f"^product-"))
 
     res = []
@@ -180,9 +189,23 @@ def compare_prices(pricecharting_price, courtyard_price):
     return pricecharting_price >= (courtyard_price * (1 + MINIMUM_PRICE_DIFFERENCE))
 
 
+def get_discord_webhook_url(webhook_type=None):
+    if not webhook_type:
+        webhook_id = "DISCORD_WEBHOOK_COURTYARD_ID"
+        webhook_token = "DISCORD_WEBHOOK_COURTYARD_TOKEN"
+    else:
+        webhook_id = "DISCORD_WEBHOOK_OFFERS_ID"
+        webhook_token = "DISCORD_WEBHOOK_OFFERS_TOKEN"
+
+    try:
+        return f"https://discord.com/api/webhooks/{os.environ[webhook_id]}/{os.environ[webhook_token]}"
+    except KeyError:
+        return f"https://discord.com/api/webhooks/{os.getenv(webhook_id)}/{os.getenv(webhook_token)}"
+
+
 def send_results_to_discord(card_name, card_img, courtyard_price, pricecharting_price, pricecharting_url,
                             courtyard_url, volume):
-    DISCORD_WEBHOOK_URL = f"https://discord.com/api/webhooks/{os.getenv('DISCORD_WEBHOOK_COURTYARD_ID')}/{os.getenv('DISCORD_WEBHOOK_COURTYARD_TOKEN')}"
+    DISCORD_WEBHOOK_URL = get_discord_webhook_url()
 
     price_difference = round(((1 - (pricecharting_price / courtyard_price)) * 100), 2)
 
@@ -218,7 +241,7 @@ def send_results_to_discord(card_name, card_img, courtyard_price, pricecharting_
 
 
 def send_courtyard_offer_to_discord(offer_price, listing_price, asset):
-    DISCORD_WEBHOOK_URL = f"https://discord.com/api/webhooks/{os.getenv('DISCORD_WEBHOOK_OFFERS_ID')}/{os.getenv('DISCORD_WEBHOOK_OFFERS_TOKEN')}"
+    DISCORD_WEBHOOK_URL = get_discord_webhook_url("offers")
 
     price_difference = round(((1 - (offer_price / listing_price)) * 100), 2)
 
@@ -277,6 +300,7 @@ def get_image_from_pricecharting(soup):
 
 def driver():
     load_dotenv()
+    r = RedisCache()
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)
@@ -286,8 +310,8 @@ def driver():
 
     counter = 1
 
-    for n in range(200, number_of_assets, 100):
-        courtyard_url = process_courtyard_url(url, n)
+    for n in range(50, number_of_assets, 100):
+        courtyard_url = process_courtyard_url(url, offset=n)
         response = get_courtyard_data(courtyard_url)
         data = response.json()
 
@@ -296,26 +320,43 @@ def driver():
         for asset in assets:
             print(counter)
             counter += 1
-
             attributes = flatten_attributes(asset['attributes'])
 
-            params = create_name_param_for_pricecharting_search(attributes)
-            response = get_page_from_pricecharting(params, attributes)
-            if not response: continue
-            time.sleep(1)
+            cache = check_cache(attributes['Serial'], r)
 
-            soup = BeautifulSoup(response.content, "html.parser")
+            courtyard_price = get_price_from_courtyard(asset)
+            check_courtyard_offers(courtyard_price, asset)
+            if cache:
+                cache = cache[0]
+                pricecharting_prices = cache['prices']
+                card_img = cache['card_img']
+                pricecharting_url = cache['pricecharting_url']
+                liquidity_info = cache['liquidity_info']
+            else:
+                params = create_name_param_for_pricecharting_search(attributes)
+                response = get_page_from_pricecharting(params, attributes)
+                if not response:
+                    continue
 
-            pricecharting_information = get_prices_from_pricecharting(soup)
-            pricecharting_prices = pricecharting_information['prices']
-            pricecharting_url = response.url
+                time.sleep(1)
 
-            card_img = get_image_from_pricecharting(soup)
+                soup = BeautifulSoup(response.content, "html.parser")
 
-            liquidity_info = get_liquidity_from_pricecharting(soup)
+                pricecharting_information = get_prices_from_pricecharting(soup)
+                pricecharting_prices = pricecharting_information['prices']
+                pricecharting_url = response.url
+
+                card_img = get_image_from_pricecharting(soup)
+
+                liquidity_info = get_liquidity_from_pricecharting(soup)
+
+                payload = pricecharting_information
+                payload['pricecharting_url'] = pricecharting_url
+                payload['card_img'] = card_img
+                payload['liquidity_info'] = liquidity_info
+                update_cache(attributes['Serial'], payload, r)
 
             card_name = asset['title']
-
             courtyard_url = f"https://courtyard.io/asset/{asset['proof_of_integrity']}"
             courtyard_price = get_price_from_courtyard(asset)
 

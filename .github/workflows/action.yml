@@ -1,0 +1,45 @@
+name: run main.py
+
+on:
+  schedule:
+    - cron: '5 * * * *'
+
+jobs:
+  job_1:
+    - name: Download serial of last fetched asset
+      uses: actions/download-artifact@v4
+      with:
+        name: get-last-fetched
+      path: previous_result.txt
+
+  job_2:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: checkout repo content
+          uses: actions/checkout@v2 # checkout the repository content
+
+        - name: setup python
+          uses: actions/setup-python@v4
+          with:
+            python-version: '3.10' # install the python version needed
+
+        - name: install python packages
+          run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+
+        - name: execute py script # run main.py
+          env:
+            DISCORD_WEBHOOK_COURTYARD_ID: ${{ secrets.DISCORD_WEBHOOK_COURTYARD_ID }}
+            DISCORD_WEBHOOK_COURTYARD_TOKEN: ${{ secrets.DISCORD_WEBHOOK_COURTYARD_TOKEN }}
+            DISCORD_WEBHOOK_OFFERS_ID: ${{ secrets.DISCORD_WEBHOOK_OFFERS_ID }}
+            DISCORD_WEBHOOK_OFFERS_TOKEN: ${{ secrets.DISCORD_WEBHOOK_OFFERS_TOKEN }}
+          run: python main.py
+
+    job_3:
+      - name: Upload serial of last fetched asset from job_2
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-last-fetched
+          path: previous_result.txt

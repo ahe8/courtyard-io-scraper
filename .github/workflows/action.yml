@@ -18,6 +18,7 @@ jobs:
   job_2:
     name: run main.py scraping script
     runs-on: ubuntu-latest
+    needs: job_1
     steps:
       - name: checkout repo content
         uses: actions/checkout@v2 # checkout the repository content
@@ -43,6 +44,7 @@ jobs:
   job_3:
     name: Upload serial of last fetched asset from job_2
     runs-on: ubuntu-latest
+    needs: job_2
     steps:
       - name: Upload serial of last fetched asset
         uses: actions/upload-artifact@v4

@@ -365,7 +365,7 @@ def driver(url=default_url):
 
 
 def main(*argv):
-    if argv[1]:
+    if len(argv) > 1 and argv[1]:
         driver(argv[1])
     else:
         driver()

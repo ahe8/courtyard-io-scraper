@@ -6,19 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  job_1:
-    name: Download serial of last fetched asset
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download serial of previous result
-        uses: actions/download-artifact@v4
-        with:
-          name: prev_results
-
-  job_2:
+  job1:
     name: run main.py scraping script
     runs-on: ubuntu-latest
-    needs: job_1
     steps:
       - name: checkout repo content
         uses: actions/checkout@v2 # checkout the repository content
@@ -40,14 +30,3 @@ jobs:
           DISCORD_WEBHOOK_OFFERS_ID: ${{ secrets.DISCORD_WEBHOOK_OFFERS_ID }}
           DISCORD_WEBHOOK_OFFERS_TOKEN: ${{ secrets.DISCORD_WEBHOOK_OFFERS_TOKEN }}
         run: python main.py
-
-  job_3:
-    name: Upload serial of last fetched asset from job_2
-    runs-on: ubuntu-latest
-    needs: job_2
-    steps:
-      - name: Upload serial of last fetched asset
-        uses: actions/upload-artifact@v4
-        with:
-          name: prev_results
-          path: previous_result.txt

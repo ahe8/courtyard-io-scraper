@@ -28,7 +28,7 @@ headers = {
 
 def process_courtyard_url(url, offset=0):
     params = url.split('page=1&')[1]
-    converted_url = f"https://api.courtyard.io/index/query?{params}&offset={offset}&limit=5&sortBy=listingDate%3Adesc"
+    converted_url = f"https://api.courtyard.io/index/query?{params}&offset={offset}&limit=100&sortBy=listingDate%3Adesc"
     return converted_url
 
 
@@ -289,22 +289,22 @@ def get_image_from_pricecharting(soup):
     return soup.find("div", id="product_details").find("img")['src']
 
 
-def get_last_fetched_from_artifact_file():
-    with open("previous_result.txt", 'r') as f:
-        return f.read()
+def get_last_fetched_from_artifact_file(env_file):
+    with open(env_file, "r") as f:
+        return f.read("MY_VAR=MY_VALUE")
 
 
 def save_to_artifact_file(last_result):
-    with open("previous_result.txt", 'w') as f:
-        f.write(last_result)
+    env_file = os.getenv('GITHUB_ENV')
+    with open(env_file, 'a') as f:
+        f.write(f"LAST_SERIAL_FETCHED={last_result}")
         f.close()
 
 
 def driver(url=default_url):
     load_dotenv()
 
-    previous_result = get_last_fetched_from_artifact_file()
-    print(previous_result)
+    previous_result = os.environ['LAST_SERIAL_FETCHED']
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)
@@ -316,7 +316,7 @@ def driver(url=default_url):
 
     for asset in assets:
         attributes = flatten_attributes(asset['attributes'])
-        if previous_result == attributes['Serial']:
+        if previous_result == str(attributes['Serial']):
             return
         last_asset_processed = attributes['Serial']
 

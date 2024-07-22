@@ -40,12 +40,12 @@ jobs:
           DISCORD_WEBHOOK_OFFERS_TOKEN: ${{ secrets.DISCORD_WEBHOOK_OFFERS_TOKEN }}
         run: python main.py
 
-    job_3:
-      name: Upload serial of last fetched asset from job_2
-      runs-on: ubuntu-latest
-      steps:
-        - name: Upload serial of last fetched asset
-          uses: actions/upload-artifact@v4
-          with:
-            name: prev_results
-            path: previous_result.txt
+  job_3:
+    name: Upload serial of last fetched asset from job_2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload serial of last fetched asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: prev_results
+          path: previous_result.txt

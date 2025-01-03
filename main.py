@@ -22,7 +22,6 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8,zh-TW;q=0.7,zh-CN;q=0.6,zh;q=0.5',
-    'Accept-Encoding': 'gzip, deflate, br, zstd'
 }
 
 
@@ -306,15 +305,13 @@ def update_github_repo_variable(last_result):
 def driver(url=default_url):
     load_dotenv()
 
-    previous_result = os.environ['LAST_SERIAL_FETCHED']
+    previous_result = os.environ.get('LAST_SERIAL_FETCHED')
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)
     data = response.json()
 
     assets = data['assets']
-
-    update_github_repo_variable(flatten_attributes(assets[0]['attributes'])['Serial'])
 
     for asset in assets:
         attributes = flatten_attributes(asset['attributes'])
@@ -362,6 +359,8 @@ def driver(url=default_url):
                 courtyard_url=courtyard_url,
                 volume=volume
             )
+
+    update_github_repo_variable(flatten_attributes(assets[0]['attributes'])['Serial'])
 
 
 def main(*argv):

@@ -297,7 +297,7 @@ def get_image_from_pricecharting(soup):
 
 
 def update_github_repo_variable(last_result):
-    print(f"Updated Last Serial Fetched: {last_result}")
+
     auth_token = os.environ['GH_REPO_VARIABLES_AUTH_TOKEN']
     github_headers = {
         "Authorization": f"Bearer {auth_token}",
@@ -307,7 +307,13 @@ def update_github_repo_variable(last_result):
 
     body = {"name": "LAST_SERIAL_FETCHED", "value": str(last_result)}
 
-    requests.patch(api_url, json=body, headers=github_headers)
+    response = requests.patch(api_url, json=body, headers=github_headers)
+
+    if response.status_code == 204:
+        print(f"Updated Last Serial Fetched: {last_result}")
+    else:
+        print(response.content)
+
 
 def driver(url=default_url):
     load_dotenv()
@@ -322,7 +328,7 @@ def driver(url=default_url):
 
     assets = data['assets']
 
-    for i in range(NUMBER_OF_CARDS_TO_CHECK):
+    for i in range(1):
         asset = assets[i]
 
         attributes = flatten_attributes(asset['attributes'])

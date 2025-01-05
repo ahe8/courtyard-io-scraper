@@ -328,7 +328,7 @@ def driver(url=default_url):
 
     assets = data['assets']
 
-    for i in range(1):
+    for i in range(NUMBER_OF_CARDS_TO_CHECK):
         asset = assets[i]
 
         attributes = flatten_attributes(asset['attributes'])

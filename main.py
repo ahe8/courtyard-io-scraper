@@ -278,6 +278,10 @@ def send_courtyard_offer_to_discord(offer_price, listing_price, asset):
         print(response.content)
 
 
+def log_to_discord():
+    pass
+
+
 def check_courtyard_offers(listing_price, asset):
     best_price = 0
     SELLING_FEE = 0.065
@@ -297,7 +301,6 @@ def get_image_from_pricecharting(soup):
 
 
 def update_github_repo_variable(last_result):
-
     auth_token = os.environ['GH_REPO_VARIABLES_AUTH_TOKEN']
     github_headers = {
         "Authorization": f"Bearer {auth_token}",
@@ -318,9 +321,9 @@ def update_github_repo_variable(last_result):
 def driver(url=default_url):
     load_dotenv()
 
-    previous_result = os.environ.get('LAST_SERIAL_FETCHED')
+    last_processed_serial = "25466742"
 
-    print(f"Last Serial Fetched: {previous_result}")
+    print(f"Last Serial Fetched: {last_processed_serial}")
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)
@@ -332,8 +335,8 @@ def driver(url=default_url):
         asset = assets[i]
 
         attributes = flatten_attributes(asset['attributes'])
-        if previous_result == str(attributes['Serial']):
-            return
+        if last_processed_serial == str(attributes['Serial']):
+            break
 
         params = create_name_param_for_pricecharting_search(attributes)
         response = get_page_from_pricecharting(params, attributes)
@@ -377,7 +380,9 @@ def driver(url=default_url):
                 volume=volume
             )
 
-    update_github_repo_variable(flatten_attributes(assets[0]['attributes'])['Serial'])
+    latest_card_serial = flatten_attributes(assets[0]['attributes'])['Serial']
+    if latest_card_serial != last_processed_serial:
+        update_github_repo_variable(latest_card_serial)
 
 
 def main(*argv):

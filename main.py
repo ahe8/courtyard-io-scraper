@@ -15,6 +15,7 @@ class ResultTable(Enum):
 
 
 MINIMUM_PRICE_DIFFERENCE = 0.15  # percentage
+NUMBER_OF_CARDS_TO_CHECK = 50
 
 default_url = "https://courtyard.io/marketplace?sortBy=listingDate%3Adesc&itemsPerPage=100&page=1&Category=Pokémon&Grader=PSA&Grade=10+GEM+MINT%3B9+MINT"
 
@@ -88,7 +89,10 @@ def print_search_results(search_query, results):
 
 
 def get_page_from_results(search_result_soup, attributes):
-    rows = search_result_soup.find("table", id="games_table").find("tbody").findAll("tr", id=re.compile(f"^product-"))
+    result = search_result_soup.find("table", id="games_table")
+    if not result:
+        return
+    rows = result.find("tbody").findAll("tr", id=re.compile(f"^product-"))
 
     res = []
 
@@ -120,7 +124,11 @@ def get_page_from_results(search_result_soup, attributes):
 
 
 def get_numbers_from_string(string):
-    return re.search(r"\d+(?:\.\d+)?", string)[0]
+    match = re.search(r"\d+(?:\.\d+)?", string)
+    if not match:
+        print(string)
+    return match.group(0)
+
 
 
 def get_price_from_courtyard(asset):
@@ -289,7 +297,7 @@ def get_image_from_pricecharting(soup):
 
 
 def update_github_repo_variable(last_result):
-    print(last_result)
+    print(f"Updated Last Serial Fetched: {last_result}")
     auth_token = os.environ['GH_REPO_VARIABLES_AUTH_TOKEN']
     github_headers = {
         "Authorization": f"Bearer {auth_token}",
@@ -301,11 +309,12 @@ def update_github_repo_variable(last_result):
 
     requests.patch(api_url, json=body, headers=github_headers)
 
-
 def driver(url=default_url):
     load_dotenv()
 
     previous_result = os.environ.get('LAST_SERIAL_FETCHED')
+
+    print(f"Last Serial Fetched: {previous_result}")
 
     courtyard_url = process_courtyard_url(url)
     response = get_courtyard_data(courtyard_url)
@@ -313,7 +322,9 @@ def driver(url=default_url):
 
     assets = data['assets']
 
-    for asset in assets:
+    for i in range(NUMBER_OF_CARDS_TO_CHECK):
+        asset = assets[i]
+
         attributes = flatten_attributes(asset['attributes'])
         if previous_result == str(attributes['Serial']):
             return

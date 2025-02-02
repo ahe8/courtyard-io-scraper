@@ -387,8 +387,8 @@ def driver(url=default_url):
             )
 
     latest_card_serial = flatten_attributes(assets[0]['attributes'])['Serial']
-    # if latest_card_serial != last_processed_serial:
-    #     update_github_repo_variable(latest_card_serial)
+    if latest_card_serial != last_processed_serial:
+        update_github_repo_variable(latest_card_serial)
 
 
 def main(*argv):

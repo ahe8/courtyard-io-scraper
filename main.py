@@ -324,7 +324,7 @@ def update_github_repo_variable(last_result):
 def driver(url=default_url):
     load_dotenv()
 
-    last_processed_serial = os.environ.get('LAST_SERIAL_FETCHED')
+    last_processed_serial = 75926653
 
     print(f"Last Serial Fetched: {last_processed_serial}")
 
@@ -340,7 +340,8 @@ def driver(url=default_url):
         attributes = flatten_attributes(asset['attributes'])
         if last_processed_serial == str(attributes['Serial']):
             break
-        if attributes['Language'] != "English" or attributes['Language'] != "Japanese":
+
+        if attributes['Language'] != "English" and attributes['Language'] != "Japanese":
             continue
 
         params = create_name_param_for_pricecharting_search(attributes)
@@ -386,8 +387,8 @@ def driver(url=default_url):
             )
 
     latest_card_serial = flatten_attributes(assets[0]['attributes'])['Serial']
-    if latest_card_serial != last_processed_serial:
-        update_github_repo_variable(latest_card_serial)
+    # if latest_card_serial != last_processed_serial:
+    #     update_github_repo_variable(latest_card_serial)
 
 
 def main(*argv):

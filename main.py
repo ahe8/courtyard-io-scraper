@@ -324,7 +324,7 @@ def update_github_repo_variable(last_result):
 def driver(url=default_url):
     load_dotenv()
 
-    last_processed_serial = 75926653
+    last_processed_serial = os.environ.get('LAST_SERIAL_FETCHED')
 
     print(f"Last Serial Fetched: {last_processed_serial}")
 

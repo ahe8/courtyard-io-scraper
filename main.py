@@ -340,6 +340,8 @@ def driver(url=default_url):
         attributes = flatten_attributes(asset['attributes'])
         if last_processed_serial == str(attributes['Serial']):
             break
+        if attributes['Language'] != "English" or attributes['Language'] != "Japanese":
+            continue
 
         params = create_name_param_for_pricecharting_search(attributes)
         response = get_page_from_pricecharting(params, attributes)

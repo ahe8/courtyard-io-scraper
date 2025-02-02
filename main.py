@@ -46,10 +46,11 @@ def flatten_attributes(attributes):
         if attr == "":
             if val == '1st Edition':
                 card_information['1st Edition'] = True
-        elif 'Title' in attr:
-            card_information['Title'] = val
-        elif attr == 'Card Number':
-            card_information[attr] = get_numbers_from_string(val)
+        # elif 'Title' in attr:
+        #     card_information['Title'] = val
+        # elif attr == 'Card Number':
+        #
+        #     card_information[attr] = get_numbers_from_string(val)
         else:
             card_information[attr] = val
 
@@ -125,8 +126,10 @@ def get_page_from_results(search_result_soup, attributes):
 
 def get_numbers_from_string(string):
     match = re.search(r"\d+(?:\.\d+)?", string)
-    if not match:
+    if not match.group(0):
+        print(match)
         print(string)
+        return
     return match.group(0)
 
 
@@ -321,7 +324,7 @@ def update_github_repo_variable(last_result):
 def driver(url=default_url):
     load_dotenv()
 
-    last_processed_serial = "25466742"
+    last_processed_serial = os.environ.get('LAST_SERIAL_FETCHED')
 
     print(f"Last Serial Fetched: {last_processed_serial}")
 

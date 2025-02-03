@@ -48,9 +48,8 @@ def flatten_attributes(attributes):
                 card_information['1st Edition'] = True
         elif 'Title' in attr:
             card_information['Title'] = val
-        # elif attr == 'Card Number':
-        #
-        #     card_information[attr] = get_numbers_from_string(val)
+        elif attr == 'Card Number':
+            card_information[attr] = val.lstrip("0")
         else:
             card_information[attr] = val
 

@@ -341,7 +341,7 @@ def driver(url=default_url):
         if last_processed_serial == str(attributes['Serial']):
             break
 
-        if attributes['Language'] != "English" and attributes['Language'] != "Japanese":
+        if not attributes['Language'] == "English" and not attributes['Language'] == "Japanese":
             continue
 
         params = create_name_param_for_pricecharting_search(attributes)

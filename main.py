@@ -46,8 +46,8 @@ def flatten_attributes(attributes):
         if attr == "":
             if val == '1st Edition':
                 card_information['1st Edition'] = True
-        # elif 'Title' in attr:
-        #     card_information['Title'] = val
+        elif 'Title' in attr:
+            card_information['Title'] = val
         # elif attr == 'Card Number':
         #
         #     card_information[attr] = get_numbers_from_string(val)
